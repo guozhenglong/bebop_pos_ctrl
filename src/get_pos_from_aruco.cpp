@@ -12,6 +12,7 @@
  //ROS Images
 #include <geometry_msgs/PoseWithCovariance.h>
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/Point.h>
@@ -26,7 +27,7 @@ using namespace std;
 
 #define dx 0.3
 #define dy 0.3
-geometry_msgs::Pose  pos_pub;
+geometry_msgs::PoseStamped  pos_pub;
 
 void Quat2Euler(geometry_msgs::Quaternion &quat, geometry_msgs::Vector3 &euler);
 void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg);
@@ -41,7 +42,7 @@ int main(int argc, char* argv[])
     ros::NodeHandle nh;
     ros::Rate loopRate(20);
     
-    ros::Publisher pos_uav = nh.advertise<geometry_msgs::Pose>("/pos_uav",1);
+    ros::Publisher pos_uav = nh.advertise<geometry_msgs::PoseStamped>("/pos_uav",1);
     ros::Subscriber get_marker_pose = nh.subscribe("/aruco_eye/aruco_observation",1,&MarkerPoseCallback);
 
     while(ros::ok())
@@ -134,9 +135,11 @@ void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
         pos_ave.y /= count_markers;
         pos_ave.z /= count_markers;
         cout<<"X =:"<<pos_ave.x<<"     Y =:"<<pos_ave.y<<"     Z =:"<<pos_ave.z<<endl;
+        pos_pub.header.frame_id = "bebop_pos";
+        pos_pub.header.stamp = ros::Time::now();
         
-        pos_pub.position = pos_ave;
-        pos_pub.orientation = quat_ave;
+        pos_pub.pose.position = pos_ave;
+        pos_pub.pose.orientation = quat_ave;
     }
 }
 

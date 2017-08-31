@@ -7,8 +7,10 @@
 #include <algorithm>
 
 #include <geometry_msgs/Pose.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_msgs/Twist.h>
+//#include <geometry_msgs/TwistStamped.h>
 #include <cmath>
 typedef std::vector<geometry_msgs::Twist>::iterator VecMovIt;
 
@@ -20,9 +22,13 @@ class bebop_pos_ctrl{
         bebop_pos_ctrl(ros::NodeHandle& nh,ros::NodeHandle& pnh);
 
         void fillPatrolList();
-        void Control2Goal(double set_x, double set_y, double set_z, double set_yaw);//-+
-        void BebopPoseCallback(const geometry_msgs::Pose::ConstPtr& msg);
+        void Control2Goal(const geometry_msgs::Twist& goal_pose);//-+
+        void BebopPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+        void PIDPosControl(const  geometry_msgs::Twist& goal_pose_, 
+            const  geometry_msgs::PoseStamped& current_pose_, 
+            geometry_msgs::Twist& velocity_ctrl_);
 
+        void PIDinit();
         void Quat2Euler(geometry_msgs::Quaternion &quat, geometry_msgs::Vector3 &euler);
         void Euler2Quat(geometry_msgs::Vector3 &euler,geometry_msgs::Quaternion &quat);
         void Limitator(double& vx, double& vy, double& vz, double& yawrate);
@@ -31,16 +37,25 @@ class bebop_pos_ctrl{
         ros::NodeHandle nh_;
         ros::Subscriber get_marker_pose;
         ros::Publisher  bebop_cmd_vel;
-        geometry_msgs::Pose pos_sub;
+        geometry_msgs::PoseStamped pos_sub;
         geometry_msgs::Twist cmd_vel_pub;
+
         std::vector<geometry_msgs::Twist> patrol_list_;
         int num_point;
 
-        double  K_p_xy,K_p_z ,K_p_yaw,K_i_xy,K_i_z ,K_i_yaw;
-        double  MaxV_xy, MaxV_z , MaxV_yaw,Tolerance_hori_pos,Tolerance_vert_pos,Tolerance_yaw_rad;
-        double  x_last, y_last, z_last, yaw_last;
-        geometry_msgs::Vector3 euler_last;
+        double  K_p_xy, K_p_z, K_p_yaw, K_i_xy, K_i_z, K_i_yaw, K_d_xy, K_d_z, K_d_yaw;
+        double  MaxV_xy, MaxV_z , MaxV_yaw, Limit_xy_error_int, Limit_z_error_int, Limit_yaw_error_int;
+        double Tolerance_hori_pos,Tolerance_vert_pos,Tolerance_yaw_rad;
 
+        double  error_x_last, error_y_last, error_z_last, error_yaw_last;
+        double  error_x_currect, error_y_currect, error_z_currect, error_yaw_currect;
+        double  error_x_accu, error_y_accu, error_z_accu, error_yaw_accu;
+        double del_t; //second /s
+        geometry_msgs::PoseStamped last_pose;
+        double yaw_last;
+        double yaw_current;
+        geometry_msgs::Vector3 euler_last;
+        geometry_msgs::Vector3 euler_current;
 
 };
 }
