@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- Launches the get pos node -->
+    <node pkg="bebop_vel_ctrl" type="get_pos_from_aruco_node" name="get_pos_from_aruco_node" output="screen">
+    </node>
+</launch>

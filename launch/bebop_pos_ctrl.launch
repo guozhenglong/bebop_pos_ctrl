@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="position_control_node" pkg="bebop_pos_ctrl" type="position_control_node" output="screen" >
+    <param name="K_p_xy" value="0.2" />
+    <param name="K_p_z" value="0.2" />
+    <param name="K_p_yaw" value="1.0" />
+    <param name="K_i_xy" value="0.003" />
+    <param name="K_i_z" value="0.002" />
+    <param name="K_i_yaw" value="0.001" />
+    <param name="MaxV_xy" value="0.3" />
+    <param name="MaxV_z" value="0.2" />
+    <param name="MaxV_yaw" value="10.0"/>
+    <param name="Tolerance_hori_pos" value="0.1" />
+    <param name="Tolerance_vert_pos" value="0.1" />
+    <param name="Tolerance_yaw_rad" value="0.1"/>
+  </node>
+</launch>
