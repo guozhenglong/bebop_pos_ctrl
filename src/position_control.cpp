@@ -1,4 +1,4 @@
-#include "bebop_pos_ctrl/bebop_pos_ctrl.h"
+#include "bebop_pos_ctrl.h"
 
 
 int main(int argc, char* argv[])

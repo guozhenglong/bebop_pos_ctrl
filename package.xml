@@ -4,7 +4,7 @@
   <version>1.0.0</version>
   <description>Position controller for Parrot Bebop</description>
   <maintainer email="guozhenglong.cn@gmail.com">Guo Zhenglong</maintainer>
-
+  <license>BSD</license>
   <author email="guozhenglong.cn@gmail.com">Guo Zhenglong</author>
 
   <buildtool_depend>catkin</buildtool_depend>

@@ -1,4 +1,4 @@
-#include "bebop_pos_ctrl/bebop_pos_ctrl.h"
+#include "bebop_pos_ctrl.h"
 
 namespace Bebop_Ctrl
 {
@@ -35,20 +35,22 @@ bebop_pos_ctrl::bebop_pos_ctrl(ros::NodeHandle& nh,ros::NodeHandle& pnh):nh_(nh)
     
     for(int i = 0; i < num_point; i++)
     {
-
-    geometry_msgs::Twist temp_goal = patrol_list_.back();// remember the position arrived
-    patrol_list_.pop_back();
-    cout<<"current target position =:"<<temp_goal<<endl;
-    bebop_pos_ctrl::Control2Goal(temp_goal.linear.x,temp_goal.linear.y, temp_goal.linear.z, temp_goal.angular.z);
+        geometry_msgs::Twist temp_goal = patrol_list_.back();// remember the position arrived
+        patrol_list_.pop_back();
+        cout<<"current target position =:"<<endl;
+        cout << temp_goal.linear.x << "  ";
+        cout << temp_goal.linear.y << "  ";
+        cout << temp_goal.linear.z << "  ";
+        cout << temp_goal.angular.z << endl;
+        bebop_pos_ctrl::Control2Goal(temp_goal.linear.x,temp_goal.linear.y, temp_goal.linear.z, temp_goal.angular.z);
     }
-
 
 }
 
 void bebop_pos_ctrl::fillPatrolList()
 {
     geometry_msgs::Twist temp_goal;
-    cv::FileStorage fs("/home/exbot/catkin_ws/src/bebop_pos_ctrl/config/list.yaml", cv::FileStorage::READ);
+    cv::FileStorage fs("/home/zhenglong/bebop_uav/src/bebop_pos_ctrl/config/list.yaml", cv::FileStorage::READ);
     if( !fs.isOpened() ) // if we have file with parameters, read them
     {
         std::cout<<"ERROR, cannot open list.yaml!"<<std::endl;
@@ -65,14 +67,14 @@ void bebop_pos_ctrl::fillPatrolList()
         temp_goal.angular.y   = 0.0;
         temp_goal.angular.z   = (double)(*it)["yaw"];
 
-        std::cout << (double)(*it)["x"] << "  ";
-        std::cout << (double)(*it)["y"] << "  ";
-        std::cout << (double)(*it)["z"] << "  ";
-        std::cout << (double)(*it)["yaw"] << std::endl;
+        cout << (double)(*it)["x"] << "  ";
+        cout << (double)(*it)["y"] << "  ";
+        cout << (double)(*it)["z"] << "  ";
+        cout << (double)(*it)["yaw"] << endl;
         num_point ++;
         patrol_list_.push_back(temp_goal);
     }
-    std::reverse(patrol_list_.begin(), patrol_list_.end());
+    reverse(patrol_list_.begin(), patrol_list_.end());
     fs.release();
 }
 
