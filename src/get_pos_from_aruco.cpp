@@ -33,8 +33,9 @@ geometry_msgs::PoseStamped  pos_pub;
 
 
 // for kalman filter, x -> pos, z -> measurement
-Eigen::VectorXd x_e_;
-Eigen::VectorXd x_e;
+double dt;
+Eigen::VectorXd x_e_(6);
+Eigen::VectorXd x_e(6);
 Eigen::Vector3d z_m;
 Eigen::MatrixXd F(6, 6);
 Eigen::MatrixXd Tao(6, 6);
@@ -98,10 +99,11 @@ int main(int argc, char* argv[])
     I_3<< 1.0, 0.0, 0.0, 
           0.0, 1.0, 0.0, 
           0.0, 0.0, 1.0; 
-
+    dt = 1/30;
     P = 100 * I_6;
     Q = 100 * I_6;
     R = 100 * I_3;
+    F = dt*F + I_6;
 
     ros::Publisher pos_uav = nh.advertise<geometry_msgs::PoseStamped>("/pos_uav",1);
     ros::Publisher pos_uav_kf = nh.advertise<geometry_msgs::PoseStamped>("/pos_uav_kf",1);
