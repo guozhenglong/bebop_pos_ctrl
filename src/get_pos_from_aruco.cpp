@@ -29,6 +29,31 @@ using namespace std;
 #define dy 0.3
 geometry_msgs::PoseStamped  pos_pub;
 
+
+
+
+// for kalman filter, x -> pos, z -> measurement
+Eigen::VectorXd x_e_;
+Eigen::VectorXd x_e;
+Eigen::Vector3d z_m;
+Eigen::MatrixXd F(6, 6);
+Eigen::MatrixXd Tao(6, 6);
+Eigen::MatrixXd H(3, 6);
+Eigen::MatrixXd P_(6, 6);
+Eigen::MatrixXd P(6, 6);
+Eigen::MatrixXd Q(6, 6);
+Eigen::Matrix3d R(3, 3);
+Eigen::MatrixXd K(6, 6);
+Eigen::MatrixXd I_6(6, 6);
+Eigen::Matrix3d I_3(3, 3);
+geometry_msgs::PoseStamped  pos_kf_pub;
+geometry_msgs::Point pos_kf;
+
+
+
+
+
+
 void Quat2Euler(geometry_msgs::Quaternion &quat, geometry_msgs::Vector3 &euler);
 void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg);
 void Euler2Quat(geometry_msgs::Vector3 &euler,geometry_msgs::Quaternion &quat);
@@ -41,13 +66,51 @@ int main(int argc, char* argv[])
     ros::init(argc, argv, "get_pos_uav");
     ros::NodeHandle nh;
     ros::Rate loopRate(30);
-    
+
+    pos_kf.x = 0;
+    pos_kf.y = 0;
+    pos_kf.z = 0;
+    x_e<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+    F<< 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 0.0;   
+    Tao<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+
+    H<< 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0, 0.0, 0.0;
+
+    I_6<< 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+          0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+          0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+          0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+          0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+          0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+
+    I_3<< 1.0, 0.0, 0.0, 
+          0.0, 1.0, 0.0, 
+          0.0, 0.0, 1.0; 
+
+    P = 100 * I_6;
+    Q = 100 * I_6;
+    R = 100 * I_3;
+
     ros::Publisher pos_uav = nh.advertise<geometry_msgs::PoseStamped>("/pos_uav",1);
+    ros::Publisher pos_uav_kf = nh.advertise<geometry_msgs::PoseStamped>("/pos_uav_kf",1);
     ros::Subscriber get_marker_pose = nh.subscribe("/aruco_eye/aruco_observation",1,&MarkerPoseCallback);
 
     while(ros::ok())
     {
         pos_uav.publish(pos_pub);
+        pos_uav_kf.publish(pos_kf_pub);
     	ros::spinOnce();
     	loopRate.sleep();
     }
@@ -70,6 +133,7 @@ void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
     double roll, pitch, yaw;
     int ID;
 
+    
     pos_ave.x = 0;
     pos_ave.y = 0;
     pos_ave.z = 0;
@@ -135,11 +199,31 @@ void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
         pos_ave.y /= count_markers;
         pos_ave.z /= count_markers;
         cout<<"X =:"<<pos_ave.x<<"     Y =:"<<pos_ave.y<<"     Z =:"<<pos_ave.z<<endl;
+
+
+        // Kalman Filter
+        z_m(0) = pos_ave.x;
+        z_m(1) = pos_ave.y;
+        z_m(2) = pos_ave.z;
+        x_e_ = F * x_e ;
+        P_   = F * P * F.transpose() + Tao * Q * Tao.transpose();
+        K    = P_ * H.transpose() * (H * P_ * H.transpose() + R).inverse();
+        x_e  = x_e_ + K * (z_m - H * x_e_);
+        P    = (I_6 - K * H) * P_;
+
+        pos_kf.x = x_e(0);
+        pos_kf.y = x_e(1);
+        pos_kf.z = x_e(2);
+
         pos_pub.header.frame_id = "bebop_pos";
         pos_pub.header.stamp = ros::Time::now();
-        
         pos_pub.pose.position = pos_ave;
         pos_pub.pose.orientation = quat_ave;
+
+        pos_kf_pub.header.frame_id = "bebop_pos_kf";
+        pos_kf_pub.header.stamp = pos_pub.header.stamp;
+        pos_kf_pub.pose.position = pos_kf;
+        pos_kf_pub.pose.orientation = quat_ave;
     }
 }
 

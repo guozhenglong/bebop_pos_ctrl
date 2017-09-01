@@ -17,8 +17,6 @@ find_package(catkin REQUIRED COMPONENTS
 # find_package(Boost REQUIRED COMPONENTS system)
 
 find_package(OpenCV REQUIRED)
-
-#find_package(Eigen REQUIRED)
 find_package(cmake_modules REQUIRED)
 # catkin_python_setup()
 
