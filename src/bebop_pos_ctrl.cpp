@@ -33,7 +33,7 @@ namespace Bebop_Ctrl
 
         pnh.param("Hz", Hz, 20); 
         bebop_cmd_vel = nh_.advertise<geometry_msgs::Twist>("/bebop/cmd_vel",1);
-        get_marker_pose = nh_.subscribe("/pos_uav",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+        get_marker_pose = nh_.subscribe("/pos_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
         usleep(50000);  // 10000ms can not receive correct data
         ros::spinOnce();
 
@@ -102,7 +102,7 @@ namespace Bebop_Ctrl
 
         while(ros::ok())
         {
-            get_marker_pose = nh_.subscribe("/pos_uav",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+            get_marker_pose = nh_.subscribe("/pos_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
             usleep(40000);  // 10000ms can not receive correct data
             ros::spinOnce();
 

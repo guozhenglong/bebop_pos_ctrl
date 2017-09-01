@@ -100,10 +100,10 @@ int main(int argc, char* argv[])
           0.0, 1.0, 0.0, 
           0.0, 0.0, 1.0; 
     dt = 1/30;
-    P = 100 * I_6;
-    Q = 100 * I_6;
-    R = 100 * I_3;
-    F = dt*F + I_6;
+    P = 1 * I_6;
+    Q = 1 * I_6;
+    R = 1 * I_3;
+    //F = dt*F + I_6;
 
     ros::Publisher pos_uav = nh.advertise<geometry_msgs::PoseStamped>("/pos_uav",1);
     ros::Publisher pos_uav_kf = nh.advertise<geometry_msgs::PoseStamped>("/pos_uav_kf",1);
@@ -207,7 +207,7 @@ void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
         z_m(0) = pos_ave.x;
         z_m(1) = pos_ave.y;
         z_m(2) = pos_ave.z;
-        x_e_ = F * x_e ;
+        x_e_ = (dt*F + I_6) * x_e ;
         P_   = F * P * F.transpose() + Tao * Q * Tao.transpose();
         K    = P_ * H.transpose() * (H * P_ * H.transpose() + R).inverse();
         x_e  = x_e_ + K * (z_m - H * x_e_);
