@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 {
     ros::init(argc, argv, "get_pos_uav");
     ros::NodeHandle nh;
-    ros::Rate loopRate(20);
+    ros::Rate loopRate(30);
     
     ros::Publisher pos_uav = nh.advertise<geometry_msgs::PoseStamped>("/pos_uav",1);
     ros::Subscriber get_marker_pose = nh.subscribe("/aruco_eye/aruco_observation",1,&MarkerPoseCallback);
