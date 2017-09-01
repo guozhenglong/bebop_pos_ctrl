@@ -4,15 +4,18 @@ namespace Bebop_Ctrl
 {
     bebop_pos_ctrl::bebop_pos_ctrl(ros::NodeHandle& nh,ros::NodeHandle& pnh):nh_(nh)
     {
-        pnh.param("K_p_xy", K_p_xy, 0.2); 
+        pnh.param("K_p_x", K_p_x, 0.2); 
+        pnh.param("K_p_y", K_p_y, 0.2); 
         pnh.param("K_p_z", K_p_z, 0.2); 
         pnh.param("K_p_yaw", K_p_yaw, 0.2);
 
-        pnh.param("K_i_xy", K_i_xy, 0.001); 
+        pnh.param("K_i_x", K_i_x, 0.001); 
+        pnh.param("K_i_y", K_i_y, 0.001); 
         pnh.param("K_i_z", K_i_z, 0.001); 
         pnh.param("K_i_yaw", K_i_yaw, 0.001);
 
-        pnh.param("K_d_xy", K_d_xy, 0.001); 
+        pnh.param("K_d_x", K_d_x, 0.001); 
+        pnh.param("K_d_y", K_d_y, 0.001); 
         pnh.param("K_d_z", K_d_z, 0.001); 
         pnh.param("K_d_yaw", K_d_yaw, 0.001);
 
@@ -228,12 +231,12 @@ namespace Bebop_Ctrl
         error_yaw_accu = error_yaw_accu < -Limit_yaw_error_int ? -Limit_yaw_error_int : error_yaw_accu;
 
 
-        velocity_ctrl_.linear.x = K_p_xy*error_x_currect \
-                                + K_d_xy*(error_x_currect-error_x_last)/del_t \
-                                + K_i_xy*error_x_accu;
-        velocity_ctrl_.linear.y = K_p_xy*error_y_currect \
-                                + K_d_xy*(error_y_currect-error_y_last)/del_t \
-                                + K_i_xy*error_y_accu;
+        velocity_ctrl_.linear.x = K_p_x*error_x_currect \
+                                + K_d_x*(error_x_currect-error_x_last)/del_t \
+                                + K_i_x*error_x_accu;
+        velocity_ctrl_.linear.y = K_p_y*error_y_currect \
+                                + K_d_y*(error_y_currect-error_y_last)/del_t \
+                                + K_i_y*error_y_accu;
         velocity_ctrl_.linear.z = K_p_z*error_z_currect \
                                 + K_d_z*(error_z_currect-error_z_last)/del_t \
                                 + K_i_z*error_z_accu;

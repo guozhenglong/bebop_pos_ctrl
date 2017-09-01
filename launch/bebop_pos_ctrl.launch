@@ -3,9 +3,14 @@
   <node name="position_control_node" pkg="bebop_pos_ctrl" type="position_control_node" output="screen" >
         <param name="Hz" value="10" />
 
-        <param name="K_p_xy" value="0.06" />
-        <param name="K_i_xy" value="0.0" />
-        <param name="K_d_xy" value="0.01" />
+        <param name="K_p_x" value="0.06" />
+        <param name="K_i_x" value="0.0" />
+        <param name="K_d_x" value="0.01" />
+
+        <param name="K_p_y" value="0.06" />
+        <param name="K_i_y" value="0.0" />
+        <param name="K_d_y" value="0.01" />
+
         <param name="MaxV_xy" value="0.3" />  
         <param name="Limit_xy_error_int" value="0.1" />
         <param name="Tolerance_hori_pos" value="0.1" />
