@@ -4,6 +4,9 @@ namespace Bebop_Ctrl
 {
     bebop_pos_ctrl::bebop_pos_ctrl(ros::NodeHandle& nh,ros::NodeHandle& pnh):nh_(nh)
     {
+        pnh.param("time_hover", time_hover, 20000); 
+        pnh.param("debug", debug, true); 
+
         pnh.param("K_p_x", K_p_x, 0.2); 
         pnh.param("K_p_y", K_p_y, 0.2); 
         pnh.param("K_p_z", K_p_z, 0.2); 
@@ -47,11 +50,14 @@ namespace Bebop_Ctrl
             bebop_pos_ctrl::PIDinit();
             geometry_msgs::Twist temp_goal = patrol_list_.back();// remember the position arrived
             patrol_list_.pop_back();
-            cout<<"current target position =:"<<endl;
-            cout <<"Pos_x =:"<< temp_goal.linear.x << "  ";
-            cout <<"Pos_y =:"<< temp_goal.linear.y << "  ";
-            cout <<"Pos_z =:"<<  temp_goal.linear.z << "  ";
-            cout <<"Angle_yaw =:"<<  temp_goal.angular.z << endl;
+            if(debug || 1)
+            {
+                cout<<"current target position =:"<<endl;
+                cout <<"Target_pos_x =:"<< temp_goal.linear.x << "  ";
+                cout <<"Target_pos_y =:"<< temp_goal.linear.y << "  ";
+                cout <<"Target_pos_z =:"<<  temp_goal.linear.z << "  ";
+                cout <<"Angle_yaw =:"<<  temp_goal.angular.z << endl;
+            }
             bebop_pos_ctrl::Control2Goal(temp_goal);
         }
 
@@ -78,12 +84,15 @@ namespace Bebop_Ctrl
             temp_goal.angular.x   = 0.0;
             temp_goal.angular.y   = 0.0;
             temp_goal.angular.z   = (double)(*it)["yaw"];
-
-            cout<<"Position "<<num_point<<" =:"<<endl;
-            cout <<"Pos_x =:"<< (double)(*it)["x"] << "  ";
-            cout <<"Pos_y =:"<< (double)(*it)["y"] << "  ";
-            cout <<"Pos_z =:"<<  (double)(*it)["z"] << "  ";
-            cout <<"Angle_yaw =:"<<  (double)(*it)["yaw"] << endl;
+            if(debug)
+            {
+                cout<<"Position "<<num_point<<" =:"<<endl;
+                cout <<"Pos_x =:"<< (double)(*it)["x"] << "  ";
+                cout <<"Pos_y =:"<< (double)(*it)["y"] << "  ";
+                cout <<"Pos_z =:"<<  (double)(*it)["z"] << "  ";
+                cout <<"Angle_yaw =:"<<  (double)(*it)["yaw"] << endl;
+            }
+           
             
             patrol_list_.push_back(temp_goal);
         }
@@ -102,20 +111,23 @@ namespace Bebop_Ctrl
 
         while(ros::ok())
         {
-            get_marker_pose = nh_.subscribe("/pos_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+            get_marker_pose = nh_.subscribe("/pos_uav",2,&bebop_pos_ctrl::BebopPoseCallback,this);
             usleep(40000);  // 10000ms can not receive correct data
             ros::spinOnce();
 
             get_x = pos_sub.pose.position.x;
             get_y = pos_sub.pose.position.y;
             get_z = pos_sub.pose.position.z;
-            cout<<"get_x: "<<get_x;
-            cout<<"     get_y: "<<get_y;
-            cout<<"     get_z: "<<get_z;
-
             bebop_pos_ctrl::Quat2Euler(pos_sub.pose.orientation, get_euler); // rad
             get_yaw = get_euler.z;
-            cout<<"    yaw(rad): "<<get_yaw<<endl;
+            if(debug)
+            {
+                cout<<"get_x: "<<get_x;
+                cout<<"     get_y: "<<get_y;
+                cout<<"     get_z: "<<get_z;
+                cout<<"    yaw(rad): "<<get_yaw<<endl;
+            }
+   
 
 
             set_x = goal_pose.linear.x;
@@ -129,6 +141,14 @@ namespace Bebop_Ctrl
                 abs(get_z-set_z)<Tolerance_vert_pos  && abs(get_yaw-set_yaw)< Tolerance_yaw_rad)
                 {
                     cout<<"Jump out the goal control loop!"<<endl;
+                    // cmd_vel_pub.linear.x = 0.0;
+                    // cmd_vel_pub.linear.y = 0.0; 
+                    // cmd_vel_pub.linear.z = 0.0;
+                    // cmd_vel_pub.angular.x = 0.0;
+                    // cmd_vel_pub.angular.y = 0.0;
+                    // cmd_vel_pub.angular.z = 0.0;
+                    // bebop_cmd_vel.publish(cmd_vel_pub);
+                    // usleep(time_hover);
                     break;
                 }
                 else
@@ -160,6 +180,8 @@ namespace Bebop_Ctrl
                     bebop_cmd_vel.publish(cmd_vel_pub);
                 }
             }
+            else
+                continue;
             loopRate.sleep();
         }
         cout<<"leave Control2Goal!"<<endl;
@@ -189,7 +211,7 @@ namespace Bebop_Ctrl
         // cout<<"last_pose time =:"<<last_pose.header.stamp.toNSec()<<endl;
         //del_t=(current_pose_.header.stamp.toNSec()-last_pose.header.stamp.toNSec());
         del_t= 0.1;
-        cout<<"delta time (nsec)=:"<<del_t<<endl;
+        //cout<<"delta time (nsec)=:"<<del_t<<endl;
         bebop_pos_ctrl::Quat2Euler(pos_sub.pose.orientation, euler_last); // rad
         yaw_last=euler_last.z;
         geometry_msgs::Quaternion tmp_q = current_pose_.pose.orientation;
@@ -247,12 +269,15 @@ namespace Bebop_Ctrl
         bebop_pos_ctrl::Limitator(velocity_ctrl_.linear.x, velocity_ctrl_.linear.y, 
             velocity_ctrl_.linear.z, velocity_ctrl_.angular.z); 
         
-        cout<<"current control velocity =:"<<endl;
-        cout <<"V_x =:"<< velocity_ctrl_.linear.x << "  ";
-        cout <<"V_y =:"<< velocity_ctrl_.linear.y << "  ";
-        cout <<"V_z =:"<<  velocity_ctrl_.linear.z << "  ";
-        cout <<"V_yaw =:"<<  velocity_ctrl_.angular.z << endl;
-
+        if(debug)
+        {
+            cout<<"current control velocity =:"<<endl;
+            cout <<"V_x =:"<< velocity_ctrl_.linear.x << "  ";
+            cout <<"V_y =:"<< velocity_ctrl_.linear.y << "  ";
+            cout <<"V_z =:"<<  velocity_ctrl_.linear.z << "  ";
+            cout <<"V_yaw =:"<<  velocity_ctrl_.angular.z << endl;    
+        }
+        
         /*
         linear.x (+)  fly forward
                 (-)  fly backward
@@ -300,8 +325,8 @@ namespace Bebop_Ctrl
         // cout<<"pitch =  :"<< asin(t2)<<endl;
         // cout<<"roll  =  :"<< atan2(t3, t4)<<endl;
         // cout<<"yaw   =  :"<< atan2(t1, t0)<<endl;
-        euler.x = atan2(t3, t4);
-        euler.y = asin(t2);
+        euler.x = asin(t2);
+        euler.y = -atan2(t3, t4);
         euler.z = atan2(t1, t0);
     }
 

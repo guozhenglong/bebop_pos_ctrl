@@ -43,6 +43,8 @@ class bebop_pos_ctrl{
         std::vector<geometry_msgs::Twist> patrol_list_;
         int num_point;
         int Hz;
+        int time_hover;
+        bool debug = true;
 
         double  K_p_x, K_p_y, K_p_z, K_p_yaw, K_i_x, K_i_y, K_i_z, K_i_yaw, K_d_x, K_d_y, K_d_z, K_d_yaw;
         double  MaxV_xy, MaxV_z , MaxV_yaw, Limit_xy_error_int, Limit_z_error_int, Limit_yaw_error_int;
