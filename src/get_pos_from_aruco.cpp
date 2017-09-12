@@ -172,7 +172,7 @@ void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
         pitch /= count_markers;
         yaw   /= count_markers;
         euler.x = roll;
-        euler.y = pitch;
+        euler.y = pitch - 10/180*3.14159;
         euler.z = - yaw; // the image is opposite to the real scene. The left in image is the right in bebop, the right in image is the left in bebop.
         Euler2Quat(euler, quat_ave);
         //cout<<"Roll =:"<<euler.x<<"     Pitch =:"<<euler.y<<"     Yaw =:"<<euler.z<<endl;
@@ -198,13 +198,16 @@ void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
             */
             double limit_pitch_cam = (90-80)/180*3.14159;
             double bias_cam = 0.1;
-            pos_in_body(0) = (- pos_marker.y)*cos(limit_pitch_cam) + (pos_marker.z)*sin(limit_pitch_cam) + bias_cam;
+            // pos_in_body(0) = (- pos_marker.y)*cos(limit_pitch_cam) + (pos_marker.z)*sin(limit_pitch_cam) + bias_cam;
+            // pos_in_body(1) = pos_marker.x;
+            // pos_in_body(2) = -(- pos_marker.y)*sin(limit_pitch_cam) + (pos_marker.z)*cos(limit_pitch_cam);
+            pos_in_body(0) = (- pos_marker.y);
             pos_in_body(1) = pos_marker.x;
-            pos_in_body(2) = -(- pos_marker.y)*sin(limit_pitch_cam) + (pos_marker.z)*cos(limit_pitch_cam);
+            pos_in_body(2) = pos_marker.z;
             Euler2Rota(euler,rot);
             //Quat2Rota(quat_ave,rot);
             //pos_in_tag = - rot*pos_in_body;
-            pos_in_tag = rot*pos_in_body;
+            pos_in_tag = - rot*pos_in_body;
             // cout<<"****************The Matrix is : "<<rot<<endl;
             // cout<<"################The Relative Position is : "<<pos_in_tag<<endl;
             pos_ave.x += (pos_in_tag(0) + (9-(int)(ID/10))*dx); 
@@ -225,19 +228,19 @@ void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
         //cout<<"X =:"<<pos_ave.x<<"     Y =:"<<pos_ave.y<<"     Z =:"<<pos_ave.z<<endl;
 
 
-        // Kalman Filter
-        z_m(0) = pos_debug.x;
-        z_m(1) = pos_debug.y;
-        z_m(2) = pos_debug.z;
-        x_e_ = (dt*F + I_6) * x_e ;
-        P_   = F * P * F.transpose() + Tao * Q * Tao.transpose();
-        K    = P_ * H.transpose() * (H * P_ * H.transpose() + R).inverse();
-        x_e  = x_e_ + K * (z_m - H * x_e_);
-        P    = (I_6 - K * H) * P_;
+        // // Kalman Filter
+        // z_m(0) = pos_debug.x;
+        // z_m(1) = pos_debug.y;
+        // z_m(2) = pos_debug.z;
+        // x_e_ = (dt*F + I_6) * x_e ;
+        // P_   = F * P * F.transpose() + Tao * Q * Tao.transpose();
+        // K    = P_ * H.transpose() * (H * P_ * H.transpose() + R).inverse();
+        // x_e  = x_e_ + K * (z_m - H * x_e_);
+        // P    = (I_6 - K * H) * P_;
 
-        pos_kf.x = x_e(0);
-        pos_kf.y = x_e(1);
-        pos_kf.z = x_e(2);
+        // pos_kf.x = x_e(0);
+        // pos_kf.y = x_e(1);
+        // pos_kf.z = x_e(2);
 
         pos_pub.header.frame_id = "bebop_pos";
         pos_pub.header.stamp = ros::Time::now();
@@ -252,7 +255,8 @@ void MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
 
         pos_kf_pub.header.frame_id = "bebop_pos_kf";
         pos_kf_pub.header.stamp = pos_pub.header.stamp;
-        pos_kf_pub.pose.position = pos_kf;
+        pos_kf_pub.pose.position = pos_ave;
+        //pos_kf_pub.pose.position = pos_kf;
         pos_kf_pub.pose.orientation = quat_ave;
 
 
