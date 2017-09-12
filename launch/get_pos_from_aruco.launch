@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 	<!-- Launches the get pos node -->
-    <node pkg="bebop_pos_ctrl" type="get_pos_from_aruco_node" name="get_pos_from_aruco_node" output="screen">
+    <node pkg="bebop_pos_ctrl" type="get_pos_uav_node" name="get_pos_uav_node" output="screen">
         <param name="kp" value="100" />
         <param name="kr" value="100" />
         <param name="kq" value="100" />
