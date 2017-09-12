@@ -12,6 +12,9 @@ namespace Localization
         pnh.param("Lckp", Lckp, 1.0);
         pnh.param("Lckq", Lckq, 1.0);
         pnh.param("Lckr", Lckr, 1.0);
+
+
+        local_position::KalmanFilterInit();
         get_marker_pose = nh_.subscribe("/aruco_eye/aruco_observation",1,&local_position::MarkerPoseCallback,this);
         att_uav = nh_.advertise<geometry_msgs::PointStamped>("/att_uav",1);
         att_uav_kf = nh_.advertise<geometry_msgs::PointStamped>("/att_uav_kf",1);
@@ -19,7 +22,7 @@ namespace Localization
         pos_comp_uav = nh_.advertise<geometry_msgs::PoseStamped>("/pos_comp_uav",1);
         pos_uav_kf = nh_.advertise<geometry_msgs::PoseStamped>("/pos_uav_kf",1);
         pos_comp_uav_kf = nh_.advertise<geometry_msgs::PoseStamped>("/pos_comp_uav_kf",1);
-        local_position::KalmanFilterInit();
+
         ros::Rate loopRate(30);
     
         while(ros::ok())
@@ -39,13 +42,36 @@ namespace Localization
 
     void local_position::KalmanFilterInit()
     {
-        rot(3, 3);
-        I_6(6, 6);
-        I_3(3, 3);
-        F(6, 6);
-        Tao(6, 6);
-        H(3, 6);
+        rot = Eigen::Matrix3d::Zero(3,3);  
+        I_6 = Eigen::MatrixXd::Zero(6,6);
+        I_3 = Eigen::MatrixXd::Zero(3,3);
+        F = Eigen::MatrixXd::Zero(6,6);
+        H = Eigen::MatrixXd::Zero(3,6);
+        Tao = Eigen::MatrixXd::Zero(6,6);
 
+        Ax_e_= Eigen::VectorXd::Zero(6);
+        Ax_e= Eigen::VectorXd::Zero(6);
+        AP_ = Eigen::MatrixXd::Zero(6,6);
+        AP = Eigen::MatrixXd::Zero(6,6);
+        AQ = Eigen::MatrixXd::Zero(6,6);
+        AR = Eigen::MatrixXd::Zero(3,3);
+        AK = Eigen::MatrixXd::Zero(6,6);
+
+        Lx_e_= Eigen::VectorXd::Zero(6);
+        Lx_e= Eigen::VectorXd::Zero(6);
+        LP_ = Eigen::MatrixXd::Zero(6,6);
+        LP = Eigen::MatrixXd::Zero(6,6);
+        LQ = Eigen::MatrixXd::Zero(6,6);
+        LR = Eigen::MatrixXd::Zero(3,3);
+        LK = Eigen::MatrixXd::Zero(6,6);
+
+        Lcx_e_= Eigen::VectorXd::Zero(6);
+        Lcx_e= Eigen::VectorXd::Zero(6);
+        LcP_ = Eigen::MatrixXd::Zero(6,6);
+        LcP = Eigen::MatrixXd::Zero(6,6);
+        LcQ = Eigen::MatrixXd::Zero(6,6);
+        LcR = Eigen::MatrixXd::Zero(3,3);
+        LcK = Eigen::MatrixXd::Zero(6,6);
         dt = 1/30;
         F<< 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
             0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
@@ -66,40 +92,30 @@ namespace Localization
             0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0, 0.0, 0.0;
 
-        I_6<< 1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+        I_6<<1.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
+       
 
         I_3<< 1.0, 0.0, 0.0, 
             0.0, 1.0, 0.0, 
             0.0, 0.0, 1.0; 
               
-        AP_(6, 6);
-        AK(6, 6);
-        Ax_e_(6);
-        Ax_e_<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0; 
-        Ax_e = Ax_e_;
+        Ax_e<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0; 
         AP = Akp * I_6;
         AQ = Akq * I_6;
         AR = Akr * I_3;
 
-        LP_(6, 6);
-        LK(6, 6);
-        Lx_e_(6);
-        Lx_e_<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0; 
-        Lx_e = Lx_e_;
+
+        Lx_e<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0; 
         LP = Lkp * I_6;
         LQ = Lkq * I_6;
         LR = Lkr * I_3;
 
-        LcP_(6, 6);
-        LcK(6, 6);
-        Lcx_e_(6);
-        Lcx_e_<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0; 
-        Lcx_e = Lcx_e_;
+        Lcx_e<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0; 
         LcP = Lckp * I_6;
         LcQ = Lckq * I_6;
         LcR = Lckr * I_3;
@@ -171,8 +187,7 @@ namespace Localization
             att_pub.point.x = roll;
             att_pub.point.y = pitch;
             att_pub.point.z = yaw;
-    
-    
+     
             // Kalman Filter
             local_position::AttitudeKalmanFilter(att_pub.point,Ax_e);
             att_kf_pub.header.frame_id = "bebop_att_kf";
@@ -259,7 +274,7 @@ namespace Localization
             pos_comp_kf_pub.header.frame_id = "bebop_pos_comp_kf";
             pos_comp_kf_pub.header.stamp = time_stamped;
             pos_comp_kf_pub.pose.orientation = quat_pub;
-    
+
         }
     }
 
