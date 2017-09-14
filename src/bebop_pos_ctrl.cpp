@@ -36,7 +36,7 @@ namespace Bebop_Ctrl
 
         pnh.param("Hz", Hz, 20); 
         bebop_cmd_vel = nh_.advertise<geometry_msgs::Twist>("/bebop/cmd_vel",1);
-        get_marker_pose = nh_.subscribe("/pos_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+        get_marker_pose = nh_.subscribe("/pos_comp_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
         usleep(50000);  // 10000ms can not receive correct data
         ros::spinOnce();
 
@@ -111,7 +111,7 @@ namespace Bebop_Ctrl
 
         while(ros::ok())
         {
-            get_marker_pose = nh_.subscribe("/pos_uav",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+            get_marker_pose = nh_.subscribe("/pos_comp_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
             usleep(40000);  // 10000ms can not receive correct data
             ros::spinOnce();
 
@@ -135,7 +135,9 @@ namespace Bebop_Ctrl
             set_z = goal_pose.linear.z;
             set_yaw = goal_pose.angular.z;
 
-            if(!(get_x == 0 && get_y == 0 && get_z == 0))
+
+            if((abs(get_x) < max_x && abs(get_x) > min_x) && (abs(get_y) < max_y && abs(get_y) > min_y)
+                && (abs(get_z) < max_height && abs(get_z) > min_height))
             {
                 if(abs(get_x - set_x)<Tolerance_hori_pos && abs(get_y - set_y)<Tolerance_hori_pos && \
                 abs(get_z-set_z)<Tolerance_vert_pos  && abs(get_yaw-set_yaw)< Tolerance_yaw_rad)
@@ -181,7 +183,17 @@ namespace Bebop_Ctrl
                 }
             }
             else
-                continue;
+            {
+                geometry_msgs::Twist patrol_pose;
+                patrol_pose.linear.x = get_x;
+                patrol_pose.linear.y = get_y;
+                patrol_pose.linear.z = patrol_height;
+                patrol_pose.angular.x = 0.0;
+                patrol_pose.angular.y = 0.0;
+                patrol_pose.angular.z = get_yaw;
+                bebop_pos_ctrl::PIDPosControl(patrol_pose, pos_sub, cmd_vel_pub);  
+                bebop_cmd_vel.publish(cmd_vel_pub);
+            }
             loopRate.sleep();
         }
         cout<<"leave Control2Goal!"<<endl;

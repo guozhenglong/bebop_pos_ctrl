@@ -23,7 +23,7 @@ namespace Localization
         pos_uav_kf = nh_.advertise<geometry_msgs::PoseStamped>("/pos_uav_kf",1);
         pos_comp_uav_kf = nh_.advertise<geometry_msgs::PoseStamped>("/pos_comp_uav_kf",1);
 
-        ros::Rate loopRate(30);
+        ros::Rate loopRate(20);
     
         while(ros::ok())
         {
@@ -72,6 +72,7 @@ namespace Localization
         LcQ = Eigen::MatrixXd::Zero(6,6);
         LcR = Eigen::MatrixXd::Zero(3,3);
         LcK = Eigen::MatrixXd::Zero(6,6);
+        
         dt = 1/30;
         F<< 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
             0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
@@ -114,11 +115,13 @@ namespace Localization
         LP = Lkp * I_6;
         LQ = Lkq * I_6;
         LR = Lkr * I_3;
+        LR(2,2) = 2*LR(2,2);
 
         Lcx_e<< 0.0, 0.0, 0.0, 0.0, 0.0, 0.0; 
         LcP = Lckp * I_6;
         LcQ = Lckq * I_6;
         LcR = Lckr * I_3;
+        LcR(2,2) = 2*LcR(2,2);
 
     }
 
@@ -143,9 +146,13 @@ namespace Localization
          Lz_m(2) = position.z;
          Lx_e_ = (dt*F + I_6) * Lx_e ;
          LP_   = F * LP * F.transpose() + Tao * LQ * Tao.transpose();
+         
          LK    = LP_ * H.transpose() * (H * LP_ * H.transpose() + LR).inverse();
          Lx_e  = Lx_e_ + LK * (Lz_m - H * Lx_e_);
          LP    = (I_6 - LK * H) * LP_;
+        //  Lx_e(2) =  Lx_e(2)>min_height ?min_height:Lx_e(2); //
+        //  Lx_e(2) =  Lx_e(2)<max_height ?max_height:Lx_e(2);  //height < 0
+
     }
     void local_position::PositionCompKalmanFilter(geometry_msgs::Point& position, Eigen::VectorXd& Lcx_e)
     {
@@ -157,6 +164,8 @@ namespace Localization
          LcK    = LcP_ * H.transpose() * (H * LcP_ * H.transpose() + LcR).inverse();
          Lcx_e  = Lcx_e_ + LcK * (Lcz_m - H * Lcx_e_);
          LcP    = (I_6 - LcK * H) * LcP_;
+        //  Lcx_e(2) =  Lcx_e(2)>min_height ?min_height:Lcx_e(2);
+        //  Lcx_e(2) =  Lcx_e(2)<max_height ?max_height:Lcx_e(2);  //height < 0
     }
 
     void local_position::MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
@@ -246,6 +255,7 @@ namespace Localization
             }
 
             position_dir.x /= count_markers;
+            position_dir.x -= bias_cam; 
             position_dir.y /= count_markers;
             position_dir.z /= count_markers;
             pos_pub.header.frame_id = "bebop_pos";
@@ -261,6 +271,7 @@ namespace Localization
             pos_kf_pub.pose.orientation = quat_pub;
 
             position_comp.x /= count_markers;
+            position_comp.x -= bias_cam; 
             position_comp.y /= count_markers;
             position_comp.z /= count_markers;
             pos_comp_pub.header.frame_id = "bebop_pos_comp";

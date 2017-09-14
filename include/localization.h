@@ -70,6 +70,8 @@ class local_position{
         int count_markers, ID;
         double roll, pitch, yaw;
         double bias_cam = 0.1;
+        double min_height = -0.8;
+        double max_height = -2.5;
         double error_pitch_cam = (90-80.8)/180*3.14159;
         geometry_msgs::Point pos_marker;
         geometry_msgs::Quaternion quat_marker;

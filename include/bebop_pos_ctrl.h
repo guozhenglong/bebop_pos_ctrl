@@ -45,6 +45,13 @@ class bebop_pos_ctrl{
         int Hz;
         int time_hover;
         bool debug = true;
+        double min_x = 0.1;
+        double max_x = 2.9;
+        double min_y = 0.1;
+        double max_y = 2.9;
+        double min_height = 1.0;
+        double max_height = 2.5;
+        double patrol_height = -1.2;
 
         double  K_p_x, K_p_y, K_p_z, K_p_yaw, K_i_x, K_i_y, K_i_z, K_i_yaw, K_d_x, K_d_y, K_d_z, K_d_yaw;
         double  MaxV_xy, MaxV_z , MaxV_yaw, Limit_xy_error_int, Limit_z_error_int, Limit_yaw_error_int;
