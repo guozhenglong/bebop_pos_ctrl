@@ -13,6 +13,7 @@ namespace Localization
         pnh.param("Lckq", Lckq, 1.0);
         pnh.param("Lckr", Lckr, 1.0);
 
+        pnh.param("low_pass_param", low_pass_param, 0.3);
 
         local_position::KalmanFilterInit();
         get_marker_pose = nh_.subscribe("/aruco_eye/aruco_observation",1,&local_position::MarkerPoseCallback,this);
@@ -22,6 +23,8 @@ namespace Localization
         pos_comp_uav = nh_.advertise<geometry_msgs::PoseStamped>("/pos_comp_uav",1);
         pos_uav_kf = nh_.advertise<geometry_msgs::PoseStamped>("/pos_uav_kf",1);
         pos_comp_uav_kf = nh_.advertise<geometry_msgs::PoseStamped>("/pos_comp_uav_kf",1);
+
+        vel_uav = nh_.advertise<geometry_msgs::PointStamped>("/vel_uav",1);
 
         ros::Rate loopRate(20);
     
@@ -122,6 +125,30 @@ namespace Localization
         LcQ = Lckq * I_6;
         LcR = Lckr * I_3;
         LcR(2,2) = 2*LcR(2,2);
+
+
+        // position_last and velocity_last zeros.
+        position_dir_last.x = 0.0;
+        position_dir_last.y = 0.0;
+        position_dir_last.z = 0.0;
+        // geometry_msgs::Point position_dir_kf_last;
+        // geometry_msgs::Point position_comp_last;
+        // geometry_msgs::Point position_comp_kf_last;
+       
+        velocity_dir_last.x = 0.0;
+        velocity_dir_last.y = 0.0;
+        velocity_dir_last.z = 0.0;
+        // geometry_msgs::Point velocity_dir_kf_last;
+        // geometry_msgs::Point velocity_comp_last;
+        // geometry_msgs::Point velocity_comp_kf_last;
+
+        velocity_dir.x = 0.0;
+        velocity_dir.y = 0.0;
+        velocity_dir.z = 0.0;
+        // geometry_msgs::Point velocity_dir_kf;
+        // geometry_msgs::Point velocity_comp;
+        // geometry_msgs::Point velocity_comp_kf;
+
 
     }
 
@@ -262,6 +289,19 @@ namespace Localization
             pos_pub.header.stamp = time_stamped;
             pos_pub.pose.position = position_dir;
             pos_pub.pose.orientation = quat_pub;
+
+            velocity_dir = position_dir - position_dir_last;
+            velocity_dir = low_pass_param * velocity_dir_last + (1-low_pass_param) * velocity_dir;
+            vel_pub.header.frame_id="bebop_vel";
+            vel_pub.header.stamp = time_stamped;
+            vel_pub.point = velocity_dir;
+            vel_uav.publish(vel_pub);
+
+
+            position_dir_last = position_dir;
+            velocity_dir_last = velocity_dir;
+
+
             local_position::PositionKalmanFilter(position_dir, Lx_e);
             pos_kf_pub.pose.position.x = Lx_e(0);
             pos_kf_pub.pose.position.y = Lx_e(1);
@@ -269,6 +309,8 @@ namespace Localization
             pos_kf_pub.header.frame_id = "bebop_pos_kf";
             pos_kf_pub.header.stamp = time_stamped;
             pos_kf_pub.pose.orientation = quat_pub;
+
+
 
             position_comp.x /= count_markers;
             position_comp.x -= bias_cam; 

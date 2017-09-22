@@ -52,6 +52,7 @@ class local_position{
         ros::Publisher pos_comp_uav;
         ros::Publisher pos_uav_kf ;
         ros::Publisher pos_comp_uav_kf ;
+        ros::Publisher vel_uav;
         
         geometry_msgs::PointStamped  att_pub;
         geometry_msgs::PointStamped  att_kf_pub;
@@ -60,12 +61,28 @@ class local_position{
         geometry_msgs::PoseStamped  pos_comp_pub;
         geometry_msgs::PoseStamped  pos_kf_pub;
         geometry_msgs::PoseStamped  pos_comp_kf_pub;
+
+        geometry_msgs::PointStamped  vel_pub;
+
         geometry_msgs::Point position_dir;
         geometry_msgs::Point position_dir_kf;
         geometry_msgs::Point position_comp;
         geometry_msgs::Point position_comp_kf;
 
+        geometry_msgs::Point position_dir_last;
+        // geometry_msgs::Point position_dir_kf_last;
+        // geometry_msgs::Point position_comp_last;
+        // geometry_msgs::Point position_comp_kf_last;
+       
+        geometry_msgs::Point velocity_dir_last;
+        // geometry_msgs::Point velocity_dir_kf_last;
+        // geometry_msgs::Point velocity_comp_last;
+        // geometry_msgs::Point velocity_comp_kf_last;
 
+        geometry_msgs::Point velocity_dir;
+        // geometry_msgs::Point velocity_dir_kf;
+        // geometry_msgs::Point velocity_comp;
+        // geometry_msgs::Point velocity_comp_kf;
 
         int count_markers, ID;
         double roll, pitch, yaw;
@@ -83,6 +100,9 @@ class local_position{
         Eigen::Vector3d pos_in_body;
         Eigen::Vector3d pos_in_tag;
 
+
+
+        double low_pass_param= 0.3; // velocity low pass filter parameter
         // for kalman filter, x -> pos, z -> measurement
         double dt;
         Eigen::MatrixXd I_6;
