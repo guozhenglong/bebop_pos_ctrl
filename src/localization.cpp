@@ -13,8 +13,9 @@ namespace Localization
         pnh.param("Lckq", Lckq, 1.0);
         pnh.param("Lckr", Lckr, 1.0);
 
-        pnh.param("low_pass_param", low_pass_param, 0.3);
-
+        pnh.param("low_pass_param_vel", low_pass_param_vel, 0.3);
+        pnh.param("low_pass_param_att", low_pass_param_att, 0.3);
+        
         local_position::KalmanFilterInit();
         get_marker_pose = nh_.subscribe("/aruco_eye/aruco_observation",1,&local_position::MarkerPoseCallback,this);
         att_uav = nh_.advertise<geometry_msgs::PointStamped>("/att_uav",1);
@@ -27,7 +28,7 @@ namespace Localization
         vel_uav = nh_.advertise<geometry_msgs::PointStamped>("/vel_uav",1);
 
         ros::Rate loopRate(20);
-    
+        pos_time_last = ros::Time::now();
         while(ros::ok())
         {
             pos_uav.publish(pos_pub);
@@ -76,7 +77,7 @@ namespace Localization
         LcR = Eigen::MatrixXd::Zero(3,3);
         LcK = Eigen::MatrixXd::Zero(6,6);
         
-        dt = 1/30;
+        dt = 1.0/30.0;
         F<< 0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
             0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
@@ -131,24 +132,19 @@ namespace Localization
         position_dir_last.x = 0.0;
         position_dir_last.y = 0.0;
         position_dir_last.z = 0.0;
-        // geometry_msgs::Point position_dir_kf_last;
-        // geometry_msgs::Point position_comp_last;
-        // geometry_msgs::Point position_comp_kf_last;
-       
+      
         velocity_dir_last.x = 0.0;
         velocity_dir_last.y = 0.0;
         velocity_dir_last.z = 0.0;
-        // geometry_msgs::Point velocity_dir_kf_last;
-        // geometry_msgs::Point velocity_comp_last;
-        // geometry_msgs::Point velocity_comp_kf_last;
 
         velocity_dir.x = 0.0;
         velocity_dir.y = 0.0;
         velocity_dir.z = 0.0;
-        // geometry_msgs::Point velocity_dir_kf;
-        // geometry_msgs::Point velocity_comp;
-        // geometry_msgs::Point velocity_comp_kf;
-
+        
+        att_last.x = 0.0;
+        att_last.y = 0.0;
+        att_last.z = 0.0;
+    
 
     }
 
@@ -197,10 +193,15 @@ namespace Localization
 
     void local_position::MarkerPoseCallback(const aruco_eye_msgs::MarkerList& msg)
     {
-        ros::Time time_stamped = ros::Time::now();        
+               
         if(!(msg.markers.empty()))
         {
+            ros::Time time_stamped = msg.header.stamp;
             count_markers = msg.markers.size();
+            position_dir.x = 0.0; 
+            position_dir.y = 0.0; 
+            position_dir.z = 0.0; 
+
             for(int i=0;i<count_markers;i++)
             {
                 quat_marker =  msg.markers[i].pose.pose.orientation;
@@ -226,15 +227,24 @@ namespace Localization
      
             // Kalman Filter
             local_position::AttitudeKalmanFilter(att_pub.point,Ax_e);
+            att_smooth.x = low_pass_param_att * att_last.x + (1-low_pass_param_att)*att_smooth.x;
+            att_smooth.y = low_pass_param_att * att_last.y + (1-low_pass_param_att)*att_smooth.x;
+            att_smooth.z = low_pass_param_att * att_last.z + (1-low_pass_param_att)*att_smooth.x;
+            
             att_kf_pub.header.frame_id = "bebop_att_kf";
             att_kf_pub.header.stamp = time_stamped;
-            att_kf_pub.point.x = Ax_e(0);
-            att_kf_pub.point.y = Ax_e(1);
-            att_kf_pub.point.z = Ax_e(2);
+            // att_kf_pub.point.x = Ax_e(0);
+            // att_kf_pub.point.y = Ax_e(1);
+            // att_kf_pub.point.z = Ax_e(2);
+            
+            att_kf_pub.point = att_smooth;
 
-            euler.x = Ax_e(0);
-            euler.y = Ax_e(1);
-            euler.z = Ax_e(2);
+            euler.x = att_smooth.x;
+            euler.y = att_smooth.y;
+            euler.z = att_smooth.z;
+            // euler.x = Ax_e(0);
+            // euler.y = Ax_e(1);
+            // euler.z = Ax_e(2);
 
             local_position::Euler2Quat(euler, quat_pub);
             //cout<<"Roll =:"<<euler.x<<"     Pitch =:"<<euler.y<<"     Yaw =:"<<euler.z<<endl;
@@ -290,16 +300,23 @@ namespace Localization
             pos_pub.pose.position = position_dir;
             pos_pub.pose.orientation = quat_pub;
 
-            velocity_dir = position_dir - position_dir_last;
-            velocity_dir = low_pass_param * velocity_dir_last + (1-low_pass_param) * velocity_dir;
+            cout<<"current x:"<<position_dir.x<<"   last x:"<<position_dir_last.x<<endl;
+            cout<<"dt:"<<(time_stamped-pos_time_last).toSec();
+            velocity_dir.x = (position_dir.x - position_dir_last.x)/(time_stamped-pos_time_last).toSec();
+            velocity_dir.y = (position_dir.y - position_dir_last.y)/(time_stamped-pos_time_last).toSec();
+            velocity_dir.z = (position_dir.z - position_dir_last.z)/(time_stamped-pos_time_last).toSec();
+            velocity_dir.x = low_pass_param_vel * velocity_dir_last.x + (1-low_pass_param_vel) * velocity_dir.x;
+            velocity_dir.y = low_pass_param_vel * velocity_dir_last.y + (1-low_pass_param_vel) * velocity_dir.y;
+            velocity_dir.z = low_pass_param_vel * velocity_dir_last.z + (1-low_pass_param_vel) * velocity_dir.z;
+
             vel_pub.header.frame_id="bebop_vel";
             vel_pub.header.stamp = time_stamped;
             vel_pub.point = velocity_dir;
             vel_uav.publish(vel_pub);
 
-
             position_dir_last = position_dir;
             velocity_dir_last = velocity_dir;
+            pos_time_last = time_stamped;
 
 
             local_position::PositionKalmanFilter(position_dir, Lx_e);
@@ -329,6 +346,8 @@ namespace Localization
             pos_comp_kf_pub.pose.orientation = quat_pub;
 
         }
+        else
+            ROS_INFO("No tag pose message!");
     }
 
     void local_position::Quat2Euler(geometry_msgs::Quaternion &quat, geometry_msgs::Vector3 &euler)

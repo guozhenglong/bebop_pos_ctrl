@@ -8,6 +8,7 @@
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_msgs/Twist.h>
 //#include <geometry_msgs/TwistStamped.h>
@@ -24,8 +25,10 @@ class bebop_pos_ctrl{
         void fillPatrolList();
         void Control2Goal(const geometry_msgs::Twist& goal_pose);//-+
         void BebopPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
+        void BebopVelCallback(const geometry_msgs::PointStamped::ConstPtr& msg);
         void PIDPosControl(const  geometry_msgs::Twist& goal_pose_, 
-            const  geometry_msgs::PoseStamped& current_pose_, 
+            const  geometry_msgs::PoseStamped& current_pose_,
+            const  geometry_msgs::PointStamped& current_vel_,  
             geometry_msgs::Twist& velocity_ctrl_);
 
         void PIDinit();
@@ -36,8 +39,10 @@ class bebop_pos_ctrl{
     private:
         ros::NodeHandle nh_;
         ros::Subscriber get_marker_pose;
+        ros::Subscriber get_velocity;
         ros::Publisher  bebop_cmd_vel;
         geometry_msgs::PoseStamped pos_sub;
+        geometry_msgs::PointStamped vel_sub;
         geometry_msgs::Twist cmd_vel_pub;
 
         std::vector<geometry_msgs::Twist> patrol_list_;

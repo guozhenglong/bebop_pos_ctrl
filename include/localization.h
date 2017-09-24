@@ -53,6 +53,7 @@ class local_position{
         ros::Publisher pos_uav_kf ;
         ros::Publisher pos_comp_uav_kf ;
         ros::Publisher vel_uav;
+        ros::Time pos_time_last;
         
         geometry_msgs::PointStamped  att_pub;
         geometry_msgs::PointStamped  att_kf_pub;
@@ -69,6 +70,7 @@ class local_position{
         geometry_msgs::Point position_comp;
         geometry_msgs::Point position_comp_kf;
 
+        
         geometry_msgs::Point position_dir_last;
         // geometry_msgs::Point position_dir_kf_last;
         // geometry_msgs::Point position_comp_last;
@@ -83,6 +85,10 @@ class local_position{
         // geometry_msgs::Point velocity_dir_kf;
         // geometry_msgs::Point velocity_comp;
         // geometry_msgs::Point velocity_comp_kf;
+
+        geometry_msgs::Point att_last;
+        geometry_msgs::Point att_smooth;
+
 
         int count_markers, ID;
         double roll, pitch, yaw;
@@ -102,7 +108,9 @@ class local_position{
 
 
 
-        double low_pass_param= 0.3; // velocity low pass filter parameter
+
+        double low_pass_param_vel= 0.3; // velocity low pass filter parameter
+        double low_pass_param_att=0.2; // velocity smooth filter
         // for kalman filter, x -> pos, z -> measurement
         double dt;
         Eigen::MatrixXd I_6;

@@ -37,6 +37,7 @@ namespace Bebop_Ctrl
         pnh.param("Hz", Hz, 20); 
         bebop_cmd_vel = nh_.advertise<geometry_msgs::Twist>("/bebop/cmd_vel",1);
         get_marker_pose = nh_.subscribe("/pos_comp_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+        get_velocity = nh_.subscribe("/vel_uav",2,&bebop_pos_ctrl::BebopVelCallback,this);
         usleep(50000);  // 10000ms can not receive correct data
         ros::spinOnce();
 
@@ -112,12 +113,14 @@ namespace Bebop_Ctrl
         while(ros::ok())
         {
             get_marker_pose = nh_.subscribe("/pos_comp_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+            get_velocity = nh_.subscribe("/vel_uav",2,&bebop_pos_ctrl::BebopVelCallback,this);
             usleep(40000);  // 10000ms can not receive correct data
             ros::spinOnce();
 
             get_x = pos_sub.pose.position.x;
             get_y = pos_sub.pose.position.y;
             get_z = pos_sub.pose.position.z;
+            
             bebop_pos_ctrl::Quat2Euler(pos_sub.pose.orientation, get_euler); // rad
             get_yaw = get_euler.z;
             if(debug)
@@ -155,7 +158,7 @@ namespace Bebop_Ctrl
                 }
                 else
                 {
-                    bebop_pos_ctrl::PIDPosControl(goal_pose, pos_sub, cmd_vel_pub);  
+                    bebop_pos_ctrl::PIDPosControl(goal_pose, pos_sub,vel_sub, cmd_vel_pub);  
                     // double v_x =  K_p_xy*(cos(get_yaw)*(set_x-get_x) + sin(get_yaw)*(set_y-get_y));
                     // double v_y =  K_p_xy*(-sin(get_yaw)*(set_x-get_x) + cos(get_yaw)*(set_y-get_y));
                     // double v_z =  K_p_z*(set_z - get_z);
@@ -191,7 +194,7 @@ namespace Bebop_Ctrl
                 patrol_pose.angular.x = 0.0;
                 patrol_pose.angular.y = 0.0;
                 patrol_pose.angular.z = get_yaw;
-                bebop_pos_ctrl::PIDPosControl(patrol_pose, pos_sub, cmd_vel_pub);  
+                bebop_pos_ctrl::PIDPosControl(patrol_pose, pos_sub, vel_sub, cmd_vel_pub);  
                 bebop_cmd_vel.publish(cmd_vel_pub);
             }
             loopRate.sleep();
@@ -217,6 +220,7 @@ namespace Bebop_Ctrl
 
     void bebop_pos_ctrl::PIDPosControl(const  geometry_msgs::Twist& goal_pose_, 
         const  geometry_msgs::PoseStamped& current_pose_, 
+        const  geometry_msgs::PointStamped& current_vel_, 
         geometry_msgs::Twist& velocity_ctrl_)    
     {
         // cout<<"current_pose time =:"<<current_pose_.header.stamp.toNSec()<<endl;
@@ -231,6 +235,9 @@ namespace Bebop_Ctrl
         yaw_current=euler_current.z;
 
         // IN BODY FRAME
+        double vel_x = current_vel_.point.x;
+        double vel_y = current_vel_.point.y;
+        double vel_z = current_vel_.point.z;
         double tmp_error_x, tmp_error_y;
         tmp_error_x = current_pose_.pose.position.x - last_pose.pose.position.x;
         tmp_error_y = current_pose_.pose.position.y - last_pose.pose.position.y;
@@ -265,18 +272,23 @@ namespace Bebop_Ctrl
         error_yaw_accu = error_yaw_accu < -Limit_yaw_error_int ? -Limit_yaw_error_int : error_yaw_accu;
 
 
-        velocity_ctrl_.linear.x = K_p_x*error_x_currect \
-                                + K_d_x*(error_x_currect-error_x_last)/del_t \
-                                + K_i_x*error_x_accu;
-        velocity_ctrl_.linear.y = K_p_y*error_y_currect \
-                                + K_d_y*(error_y_currect-error_y_last)/del_t \
-                                + K_i_y*error_y_accu;
-        velocity_ctrl_.linear.z = K_p_z*error_z_currect \
-                                + K_d_z*(error_z_currect-error_z_last)/del_t \
-                                + K_i_z*error_z_accu;
-        velocity_ctrl_.angular.z = K_p_yaw*error_yaw_currect \
-                                + K_d_yaw*(error_yaw_currect-error_yaw_last)/del_t \
-                                + K_i_yaw*error_yaw_accu;
+        // velocity_ctrl_.linear.x = K_p_x*error_x_currect \
+        //                         + K_d_x*(error_x_currect-error_x_last)/del_t \
+        //                         + K_i_x*error_x_accu;
+        // velocity_ctrl_.linear.y = K_p_y*error_y_currect \
+        //                         + K_d_y*(error_y_currect-error_y_last)/del_t \
+        //                         + K_i_y*error_y_accu;
+        // velocity_ctrl_.linear.z = K_p_z*error_z_currect \
+        //                         + K_d_z*(error_z_currect-error_z_last)/del_t \
+        //                         + K_i_z*error_z_accu;
+        // velocity_ctrl_.angular.z = K_p_yaw*error_yaw_currect \
+        //                         + K_d_yaw*(error_yaw_currect-error_yaw_last)/del_t \
+        //                         + K_i_yaw*error_yaw_accu;
+
+        velocity_ctrl_.linear.x = K_p_x*error_x_currect - K_d_x*vel_x;
+        velocity_ctrl_.linear.y = K_p_y*error_y_currect - K_d_y*vel_y;
+        velocity_ctrl_.linear.z = K_p_z*error_z_currect - K_d_z*vel_z;
+        velocity_ctrl_.angular.z = K_p_yaw*error_yaw_currect;
 
         bebop_pos_ctrl::Limitator(velocity_ctrl_.linear.x, velocity_ctrl_.linear.y, 
             velocity_ctrl_.linear.z, velocity_ctrl_.angular.z); 
@@ -319,6 +331,11 @@ namespace Bebop_Ctrl
     void bebop_pos_ctrl::BebopPoseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
     {
         pos_sub = *msg;
+    }
+
+    void bebop_pos_ctrl::BebopVelCallback(const geometry_msgs::PointStamped::ConstPtr& msg)
+    {
+        vel_sub = *msg;
     }
 
     void bebop_pos_ctrl::Quat2Euler(geometry_msgs::Quaternion &quat, geometry_msgs::Vector3 &euler)
