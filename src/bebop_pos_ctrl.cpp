@@ -36,7 +36,7 @@ namespace Bebop_Ctrl
 
         pnh.param("Hz", Hz, 20); 
         bebop_cmd_vel = nh_.advertise<geometry_msgs::Twist>("/bebop/cmd_vel",1);
-        get_marker_pose = nh_.subscribe("/pos_comp_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+        get_marker_pose = nh_.subscribe("/pos_uav",2,&bebop_pos_ctrl::BebopPoseCallback,this);
         get_velocity = nh_.subscribe("/vel_uav",2,&bebop_pos_ctrl::BebopVelCallback,this);
         usleep(50000);  // 10000ms can not receive correct data
         ros::spinOnce();
@@ -112,7 +112,7 @@ namespace Bebop_Ctrl
 
         while(ros::ok())
         {
-            get_marker_pose = nh_.subscribe("/pos_comp_uav_kf",2,&bebop_pos_ctrl::BebopPoseCallback,this);
+            get_marker_pose = nh_.subscribe("/pos_uav",2,&bebop_pos_ctrl::BebopPoseCallback,this);
             get_velocity = nh_.subscribe("/vel_uav",2,&bebop_pos_ctrl::BebopVelCallback,this);
             usleep(40000);  // 10000ms can not receive correct data
             ros::spinOnce();
@@ -158,7 +158,7 @@ namespace Bebop_Ctrl
                 }
                 else
                 {
-                    bebop_pos_ctrl::PIDPosControl(goal_pose, pos_sub,vel_sub, cmd_vel_pub);  
+                    // bebop_pos_ctrl::PIDPosControl(goal_pose, pos_sub,vel_sub, cmd_vel_pub);  
                     // double v_x =  K_p_xy*(cos(get_yaw)*(set_x-get_x) + sin(get_yaw)*(set_y-get_y));
                     // double v_y =  K_p_xy*(-sin(get_yaw)*(set_x-get_x) + cos(get_yaw)*(set_y-get_y));
                     // double v_z =  K_p_z*(set_z - get_z);
@@ -176,12 +176,12 @@ namespace Bebop_Ctrl
                     angular.z(+)  rotate counter clockwise    
                             (-)  rotate clockwise        
                     */
-                    // cmd_vel_pub.linear.x = v_x;
-                    // cmd_vel_pub.linear.y = -v_y; 
-                    // cmd_vel_pub.linear.z = -v_z;
-                    // cmd_vel_pub.angular.x = 0;
-                    // cmd_vel_pub.angular.y = 0;
-                    // cmd_vel_pub.angular.z = -v_yaw;
+                    cmd_vel_pub.linear.x = 0;
+                    cmd_vel_pub.linear.y = 0; 
+                    cmd_vel_pub.linear.z = 0;
+                    cmd_vel_pub.angular.x = 0;
+                    cmd_vel_pub.angular.y = 0;
+                    cmd_vel_pub.angular.z = 0;
                     bebop_cmd_vel.publish(cmd_vel_pub);
                 }
             }

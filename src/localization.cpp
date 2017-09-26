@@ -155,7 +155,7 @@ namespace Localization
          Az_m(1) = attitude.y;
          Az_m(2) = attitude.z;
          Ax_e_ = (dt*F + I_6) * Ax_e ;
-         AP_   = F * AP * F.transpose() + Tao * AQ * Tao.transpose();
+         AP_   = (dt*F + I_6) * AP * (dt*F + I_6).transpose() + Tao * AQ * Tao.transpose();
          AK    = AP_ * H.transpose() * (H * AP_ * H.transpose() + AR).inverse();
          Ax_e  = Ax_e_ + AK * (Az_m - H * Ax_e_);
          AP    = (I_6 - AK * H) * AP_;
@@ -168,7 +168,7 @@ namespace Localization
          Lz_m(1) = position.y;
          Lz_m(2) = position.z;
          Lx_e_ = (dt*F + I_6) * Lx_e ;
-         LP_   = F * LP * F.transpose() + Tao * LQ * Tao.transpose();
+         LP_   =(dt*F + I_6) * LP * (dt*F + I_6).transpose() + Tao * LQ * Tao.transpose();
          
          LK    = LP_ * H.transpose() * (H * LP_ * H.transpose() + LR).inverse();
          Lx_e  = Lx_e_ + LK * (Lz_m - H * Lx_e_);
@@ -183,7 +183,7 @@ namespace Localization
          Lcz_m(1) = position.y;
          Lcz_m(2) = position.z;
          Lcx_e_ = (dt*F + I_6) * Lcx_e ;
-         LcP_   = F * LcP * F.transpose() + Tao * LcQ * Tao.transpose();
+         LcP_   = (dt*F + I_6) * LcP * (dt*F + I_6).transpose() + Tao * LcQ * Tao.transpose();
          LcK    = LcP_ * H.transpose() * (H * LcP_ * H.transpose() + LcR).inverse();
          Lcx_e  = Lcx_e_ + LcK * (Lcz_m - H * Lcx_e_);
          LcP    = (I_6 - LcK * H) * LcP_;
@@ -239,9 +239,12 @@ namespace Localization
             
             att_kf_pub.point = att_smooth;
 
-            euler.x = att_smooth.x;
-            euler.y = att_smooth.y;
-            euler.z = att_smooth.z;
+            euler.x = roll;
+            euler.y = pitch;
+            euler.z = yaw;
+            // euler.x = att_smooth.x;
+            // euler.y = att_smooth.y;
+            // euler.z = att_smooth.z;
             // euler.x = Ax_e(0);
             // euler.y = Ax_e(1);
             // euler.z = Ax_e(2);
