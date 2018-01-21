@@ -70,15 +70,12 @@ include_directories(
 )
 
 
-add_executable(get_pos_uav_node src/get_pos_uav_node.cpp src/localization.cpp )
 add_executable(position_control_node src/position_control.cpp src/bebop_pos_ctrl.cpp)
 
-add_dependencies(get_pos_uav_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(position_control_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 # Specify libraries to link a library or executable target against
 
-target_link_libraries(get_pos_uav_node ${catkin_LIBRARIES})
 target_link_libraries(position_control_node 
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
